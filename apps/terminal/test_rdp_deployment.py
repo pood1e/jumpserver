@@ -13,6 +13,13 @@ class RdpDeploymentTests(TestCase):
         tasks = [task for block in play['tasks'] if 'install' in block.get('tags', [])
                  for task in block['block']]
         installer = next(task for task in tasks if task.get('register') == 'tinker_install')
+        rds_ready = next(task for task in tasks if task.get('register') == 'rds_ready')
+        policy = next(task for task in tasks if task.get('register') == 'nla_policy')
+        nla = next(task for task in tasks if task.get('ansible.windows.win_regedit', {}).get('name')
+                   == 'UserAuthentication')
+        self.assertLess(tasks.index(rds_ready), tasks.index(policy))
+        self.assertLess(tasks.index(policy), tasks.index(nla))
+        self.assertLess(tasks.index(nla), tasks.index(installer))
         reboot = tasks[tasks.index(installer) + 1]
         self.assertIn('/NORESTART', installer['ansible.windows.win_command']['argv'])
         self.assertIn('/RESTARTEXITCODE=3010', installer['ansible.windows.win_command']['argv'])

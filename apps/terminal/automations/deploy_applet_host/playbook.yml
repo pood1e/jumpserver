@@ -95,6 +95,26 @@
           retries: 30
           delay: 10
 
+        - name: Read the NLA Group Policy setting
+          ansible.windows.win_reg_stat:
+            path: HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services
+            name: UserAuthentication
+          register: nla_policy
+
+        - name: Check that Group Policy permits disabling NLA
+          ansible.builtin.assert:
+            that:
+              - not nla_policy.exists or (nla_policy.type == 'REG_DWORD' and nla_policy.value == 0)
+            fail_msg: Disable the Require user authentication using NLA policy for this host, apply it, and redeploy.
+
+        - name: Disable NLA for the RDP-Tcp listener
+          ansible.windows.win_regedit:
+            path: HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp
+            name: UserAuthentication
+            data: 0
+            type: dword
+            state: present
+
         # The new installer ends Tinker-managed sessions, uninstalls the old
         # Tinker and clears its managed runtime state before installing afresh.
         # Ordinary administrator sessions and installed applications are retained.
